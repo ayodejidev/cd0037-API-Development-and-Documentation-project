@@ -1,45 +1,39 @@
-import React, { Component } from 'react';
-import '../stylesheets/Header.css';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import '../stylesheets/App.css';
 
-class Header extends Component {
-  navTo(uri) {
-    window.location.href = window.location.origin + uri;
-  }
+const Header = () => {
+  const location = useLocation();
 
-  render() {
-    return (
-      <div className='App-header'>
-        <h1
-          onClick={() => {
-            this.navTo('');
-          }}
-        >
-          Udacitrivia
-        </h1>
-        <h2
-          onClick={() => {
-            this.navTo('');
-          }}
-        >
-          List
-        </h2>
-        <h2
-          onClick={() => {
-            this.navTo('/add');
-          }}
-        >
-          Add
-        </h2>
-        <h2
-          onClick={() => {
-            this.navTo('/play');
-          }}
-        >
-          Play
-        </h2>
+  return (
+    <div className='App-header'>
+      <div className='header-content'>
+        <Link to='/' className='nav-link'>
+          <h1>Udacitrivia</h1>
+        </Link>
+        <nav className='nav-menu'>
+          <Link 
+            to='/' 
+            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+          >
+            List
+          </Link>
+          <Link 
+            to='/add' 
+            className={`nav-link ${location.pathname === '/add' ? 'active' : ''}`}
+          >
+            Add
+          </Link>
+          <Link 
+            to='/play' 
+            className={`nav-link ${location.pathname === '/play' ? 'active' : ''}`}
+          >
+            Play
+          </Link>
+        </nav>
       </div>
-    );
-  }
-}
+    </div>
+  );
+};
 
 export default Header;

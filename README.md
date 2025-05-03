@@ -14,36 +14,254 @@ That's where you come in! Help them finish the trivia app so they can start hold
 
 Completing this trivia app will give you the ability to structure plan, implement, and test an API - skills essential for enabling your future applications to communicate with others.
 
-## Starting and Submitting the Project
+## Getting Started
 
-[Fork](https://help.github.com/en/articles/fork-a-repo) the project repository and [clone](https://help.github.com/en/articles/cloning-a-repository) your forked repository to your machine. Work on the project locally and make sure to push all your changes to the remote repository before submitting the link to your repository in the Classroom.
+### Prerequisites & Installation
 
-## About the Stack
+#### Backend Dependencies
+1. **Python 3.7+** - Follow instructions to install the latest version of python for your platform in the [python docs](https://docs.python.org/3/using/unix.html#getting-and-installing-the-latest-version-of-python)
 
-We started the full stack application for you. It is designed with some key functional areas:
+2. **Virtual Environment** - We recommend working within a virtual environment whenever using Python for projects. This keeps your dependencies for each project separate and organized. Instructions for setting up a virual environment for your platform can be found in the [python docs](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)
 
-### Backend
+3. **PIP Dependencies** - Once your virtual environment is setup and running, install the required dependencies by navigating to the `/backend` directory and running:
+```bash
+pip install -r requirements.txt
+```
 
-The [backend](./backend/README.md) directory contains a partially completed Flask and SQLAlchemy server. You will work primarily in `__init__.py` to define your endpoints and can reference models.py for DB and SQLAlchemy setup. These are the files you'd want to edit in the backend:
+4. **PostgreSQL** - Install and configure PostgreSQL for your platform:
+   - [macOS](https://www.postgresql.org/download/macosx/)
+   - [Windows](https://www.postgresql.org/download/windows/)
+   - [Linux](https://www.postgresql.org/download/linux/)
 
-1. `backend/flaskr/__init__.py`
-2. `backend/test_flaskr.py`
+#### Frontend Dependencies
+1. **Node.js** - Download and install Node.js from [https://nodejs.org/en/download/](https://nodejs.org/en/download/)
+2. **NPM** - Node Package Manager comes with Node.js
+3. Install project dependencies:
+```bash
+cd frontend
+npm install
+```
 
-> View the [Backend README](./backend/README.md) for more details.
+### Local Development
 
-### Frontend
+#### Backend Setup
+1. Create a `.env` file in the `backend` directory based on `.env.example`:
+```bash
+cp backend/.env.example backend/.env
+```
 
-The [frontend](./frontend/README.md) directory contains a complete React frontend to consume the data from the Flask server. If you have prior experience building a frontend application, you should feel free to edit the endpoints as you see fit for the backend you design. If you do not have prior experience building a frontend application, you should read through the frontend code before starting and make notes regarding:
+2. Update the `.env` file with your database credentials:
+```
+DB_USER=your_database_user
+DB_PASSWORD=your_database_password
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=trivia
+DB_TEST_NAME=trivia_test
+```
 
-1. What are the end points and HTTP methods the frontend is expecting to consume?
-2. How are the requests from the frontend formatted? Are they expecting certain parameters or payloads?
+3. Create the database:
+```bash
+createdb trivia
+createdb trivia_test
+```
 
-Pay special attention to what data the frontend is expecting from each API response to help guide how you format your API. The places where you may change the frontend behavior, and where you should be looking for the above information, are marked with `TODO`. These are the files you'd want to edit in the frontend:
+4. Populate the database:
+```bash
+psql trivia < backend/trivia.psql
+```
 
-1. `frontend/src/components/QuestionView.js`
-2. `frontend/src/components/FormView.js`
-3. `frontend/src/components/QuizView.js`
+5. Run the backend server:
+```bash
+cd backend
+export FLASK_APP=flaskr
+export FLASK_ENV=development
+flask run
+```
 
-By making notes ahead of time, you will practice the core skill of being able to read and understand code and will have a simple plan to follow to build out the endpoints of your backend API.
+#### Frontend Setup
+1. Start the frontend development server:
+```bash
+cd frontend
+npm start
+```
 
-> View the [Frontend README](./frontend/README.md) for more details.
+The application will be available at:
+- Frontend: http://localhost:3000
+- Backend: http://localhost:5000
+
+### Tests
+
+#### Backend Tests
+1. Make sure you have created the test database:
+```bash
+createdb trivia_test
+```
+
+2. Run the tests:
+```bash
+cd backend
+python test_flaskr.py
+```
+
+The tests will verify:
+- GET /categories
+- GET /questions
+- DELETE /questions
+- POST /questions
+- POST /questions/search
+- GET /categories/<id>/questions
+- POST /quizzes
+- Error handling
+
+#### Frontend Tests
+1. Run the frontend tests:
+```bash
+cd frontend
+npm test
+```
+
+## API Documentation
+
+### Endpoints
+
+#### GET '/categories'
+- Fetches a dictionary of categories in which the keys are the ids and the value is the corresponding string of the category
+- Request Arguments: None
+- Returns: An object with a single key, categories, that contains an object of id: category_string key: value pairs.
+
+```json
+{
+  "categories": {
+    "1": "Science",
+    "2": "Art",
+    "3": "Geography",
+    "4": "History",
+    "5": "Entertainment",
+    "6": "Sports"
+  }
+}
+```
+
+#### GET '/questions'
+- Fetches a paginated list of questions, total number of questions, all categories, and current category
+- Request Arguments: page (integer)
+- Returns: An object with paginated questions, total questions, object including all categories, and current category string
+
+```json
+{
+  "questions": [
+    {
+      "id": 1,
+      "question": "This is a question",
+      "answer": "This is an answer",
+      "difficulty": 5,
+      "category": 2
+    }
+  ],
+  "totalQuestions": 100,
+  "categories": {
+    "1": "Science",
+    "2": "Art",
+    "3": "Geography",
+    "4": "History",
+    "5": "Entertainment",
+    "6": "Sports"
+  },
+  "currentCategory": "History"
+}
+```
+
+#### DELETE '/questions/${id}'
+- Deletes a specified question using the id of the question
+- Request Arguments: id (integer)
+- Returns: Does not need to return anything besides the appropriate HTTP status code. Optionally can return the id of the question.
+
+#### POST '/questions'
+- Sends a post request in order to search for a specific question by search term
+- Request Body:
+```json
+{
+  "searchTerm": "this is the term the user is looking for"
+}
+```
+- Returns: any array of questions, a number of totalQuestions that met the search term and the current category string
+
+```json
+{
+  "questions": [
+    {
+      "id": 1,
+      "question": "This is a question",
+      "answer": "This is an answer",
+      "difficulty": 5,
+      "category": 5
+    }
+  ],
+  "totalQuestions": 100,
+  "currentCategory": "Entertainment"
+}
+```
+
+#### GET '/categories/${id}/questions'
+- Fetches questions for a category specified by id request argument
+- Request Arguments: id (integer)
+- Returns: An object with questions for the specified category, total questions, and current category string
+
+```json
+{
+  "questions": [
+    {
+      "id": 1,
+      "question": "This is a question",
+      "answer": "This is an answer",
+      "difficulty": 5,
+      "category": 4
+    }
+  ],
+  "totalQuestions": 100,
+  "currentCategory": "History"
+}
+```
+
+#### POST '/quizzes'
+- Sends a post request in order to get the next question
+- Request Body:
+```json
+{
+  "previous_questions": [1, 4, 20, 15],
+  "quiz_category": "current category"
+}
+```
+- Returns: a single new question object
+
+```json
+{
+  "question": {
+    "id": 1,
+    "question": "This is a question",
+    "answer": "This is an answer",
+    "difficulty": 5,
+    "category": 4
+  }
+}
+```
+
+### Error Handling
+
+The API will return the following error types when requests fail:
+
+- 400: Bad Request
+- 404: Resource Not Found
+- 422: Unprocessable Entity
+- 500: Internal Server Error
+
+Error responses are returned in the following format:
+
+```json
+{
+  "success": false,
+  "error": 404,
+  "message": "Resource not found"
+}
+```
