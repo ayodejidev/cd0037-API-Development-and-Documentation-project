@@ -428,6 +428,77 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], False)
         self.assertEqual(data['message'], 'Unprocessable entity')
 
+    def test_play_quiz_all_category_comprehensive(self):
+        """Test POST /quizzes endpoint with ALL category comprehensively"""
+        # Test 1: Initial request with ALL category
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': [],
+                                   'quiz_category': {'id': 0, 'type': 'All'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['question'])
+        first_question = data['question']
+
+        # Test 2: Second request with previous question
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': [first_question['id']],
+                                   'quiz_category': {'id': 0, 'type': 'All'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['question'])
+        self.assertNotEqual(data['question']['id'], first_question['id'])
+        second_question = data['question']
+
+        # Test 3: Verify questions are from different categories
+        self.assertNotEqual(first_question['category'], second_question['category'])
+
+        # Test 4: Test with all questions marked as previous
+        with self.app.app_context():
+            all_questions = Question.query.all()
+            all_question_ids = [q.id for q in all_questions]
+        
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': all_question_ids,
+                                   'quiz_category': {'id': 0, 'type': 'All'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertIsNone(data['question'])
+
+        # Test 5: Test with invalid quiz_category format
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': [],
+                                   'quiz_category': None
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Unprocessable entity')
+
+        # Test 6: Test with missing quiz_category
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': []
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Unprocessable entity')
+
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
