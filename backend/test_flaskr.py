@@ -217,6 +217,217 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], False)
         self.assertEqual(data['message'], 'Unprocessable entity')
 
+    def test_play_quiz_with_all_category(self):
+        """Test POST /quizzes endpoint with ALL category"""
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': [],
+                                   'quiz_category': {'id': 0, 'type': 'All'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['question'])
+        self.assertIn(data['question']['category'], ['1', '2', '3', '4', '5', '6'])
+
+    def test_play_quiz_with_previous_questions(self):
+        """Test POST /quizzes endpoint with previous questions"""
+        # First get a question
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': [],
+                                   'quiz_category': {'id': 0, 'type': 'All'}
+                               })
+        data = json.loads(res.data)
+        first_question = data['question']
+
+        # Now get another question, excluding the first one
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': [first_question['id']],
+                                   'quiz_category': {'id': 0, 'type': 'All'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['question'])
+        self.assertNotEqual(data['question']['id'], first_question['id'])
+
+    def test_play_quiz_with_specific_category(self):
+        """Test POST /quizzes endpoint with specific category"""
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': [],
+                                   'quiz_category': {'id': 3, 'type': 'Geography'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['question'])
+        self.assertEqual(data['question']['category'], '3')
+
+    def test_play_quiz_no_more_questions(self):
+        """Test POST /quizzes endpoint when no more questions are available"""
+        # Get all question IDs
+        res = self.client().get('/questions')
+        data = json.loads(res.data)
+        all_question_ids = [q['id'] for q in data['questions']]
+
+        # Try to get a question with all previous questions
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': all_question_ids,
+                                   'quiz_category': {'id': 0, 'type': 'All'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertIsNone(data['question'])
+
+    def test_play_quiz_invalid_category(self):
+        """Test POST /quizzes endpoint with invalid category"""
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': [],
+                                   'quiz_category': {'id': 999, 'type': 'Invalid'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Unprocessable entity')
+
+    def test_get_categories_failure(self):
+        """Test GET /categories endpoint failure"""
+        # Simulate database error by dropping the categories table
+        with self.app.app_context():
+            db.session.execute(text('DROP TABLE IF EXISTS categories CASCADE'))
+            db.session.commit()
+        
+        res = self.client().get('/categories')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 500)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Internal server error')
+
+    def test_get_questions_failure(self):
+        """Test GET /questions endpoint failure"""
+        # Simulate database error by dropping the questions table
+        with self.app.app_context():
+            db.session.execute(text('DROP TABLE IF EXISTS questions CASCADE'))
+            db.session.commit()
+        
+        res = self.client().get('/questions')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 500)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Internal server error')
+
+    def test_delete_question_success(self):
+        """Test DELETE /questions/<id> endpoint success"""
+        # First create a question to delete
+        res = self.client().post('/questions', json=self.new_question)
+        data = json.loads(res.data)
+        question_id = data['created']
+
+        # Now delete the question
+        res = self.client().delete(f'/questions/{question_id}')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['deleted'], question_id)
+
+        # Verify question is actually deleted by trying to delete it again
+        res = self.client().delete(f'/questions/{question_id}')
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code, 422)
+
+    def test_create_question_failure(self):
+        """Test POST /questions endpoint failure cases"""
+        # Test missing required fields
+        incomplete_question = {
+            'question': 'Test question',
+            'answer': 'Test answer'
+            # Missing category and difficulty
+        }
+        res = self.client().post('/questions', json=incomplete_question)
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Bad request')
+
+        # Test empty request body
+        res = self.client().post('/questions', json={})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Bad request')
+
+    def test_search_questions_failure(self):
+        """Test POST /questions/search endpoint failure"""
+        # Test with empty search term (should return all questions)
+        res = self.client().post('/questions/search', 
+                               json={'searchTerm': ''})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(len(data['questions']) > 0)  # Should return all questions
+        self.assertEqual(data['total_questions'], len(data['questions']))
+
+        # Test with missing searchTerm
+        res = self.client().post('/questions/search', 
+                               json={})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Bad request')
+
+    def test_get_questions_by_category_failure(self):
+        """Test GET /categories/<id>/questions endpoint failure"""
+        # Test with non-existent category
+        res = self.client().get('/categories/999/questions')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Resource not found')
+
+    def test_play_quiz_failure(self):
+        """Test POST /quizzes endpoint failure cases"""
+        # Test with missing quiz_category
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': []
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Unprocessable entity')
+
+        # Test with invalid previous_questions format
+        res = self.client().post('/quizzes', 
+                               json={
+                                   'previous_questions': 'not a list',
+                                   'quiz_category': {'id': 1, 'type': 'Science'}
+                               })
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Unprocessable entity')
+
 
 # Make the tests conveniently executable
 if __name__ == "__main__":

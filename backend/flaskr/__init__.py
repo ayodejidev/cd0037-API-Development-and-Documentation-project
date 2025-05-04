@@ -120,6 +120,9 @@ def create_app(test_config=None):
     def search_questions():
         try:
             body = request.get_json()
+            if not body or 'searchTerm' not in body:
+                abort(400)
+                
             search_term = body.get('searchTerm', '')
             
             questions = Question.query.filter(
@@ -171,11 +174,22 @@ def create_app(test_config=None):
             previous_questions = body.get('previous_questions', [])
             quiz_category = body.get('quiz_category', None)
 
-            if quiz_category:
-                questions = Question.query.filter_by(category=str(quiz_category['id']))
-            else:
-                questions = Question.query
+            if not quiz_category:
+                abort(422)
 
+            category_id = quiz_category.get('id')
+            
+            # Handle ALL category (id: 0)
+            if category_id == 0:
+                questions = Question.query
+            else:
+                # Check if category exists
+                category = Category.query.get(category_id)
+                if not category:
+                    abort(422)
+                questions = Question.query.filter_by(category=str(category_id))
+
+            # Filter out previous questions
             questions = questions.filter(Question.id.notin_(previous_questions)).all()
             
             if questions:
